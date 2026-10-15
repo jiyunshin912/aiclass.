@@ -1,0 +1,604 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>커스텀 양문형 캐리어 짐싸기</title>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@400;700;900&display=swap');
+        
+        body {
+            font-family: 'Noto Sans KR', sans-serif;
+            background-color: #f4f1ea;
+            color: #333;
+            margin: 0;
+            padding: 20px;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+        }
+
+        .app-container {
+            background: white;
+            width: 100%;
+            max-width: 950px;
+            border-radius: 20px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.1);
+            padding: 30px;
+            box-sizing: border-box;
+        }
+
+        /* --- 공통 말풍선 스타일 & 둥둥 뜨는 애니메이션 --- */
+        .tooltip-bubble {
+            display: inline-block;
+            background-color: #ff4757;
+            color: white;
+            font-size: 0.85rem; /* 글씨를 약간 키워서 가독성 높임 */
+            font-weight: 700;
+            padding: 8px 14px;
+            border-radius: 20px;
+            white-space: nowrap;
+            position: relative;
+            box-shadow: 0 4px 10px rgba(255, 71, 87, 0.3);
+            animation: floatUpDown 2s ease-in-out infinite;
+            user-select: none;
+        }
+
+        @keyframes floatUpDown {
+            0%, 100% { transform: translateY(0); }
+            50% { transform: translateY(-5px); }
+        }
+
+        /* 꼬리표 방향별 세팅 */
+        .bubble-left::after {
+            content: '';
+            position: absolute;
+            top: 50%;
+            right: 100%;
+            transform: translateY(-50%);
+            border: 6px solid transparent;
+            border-right-color: #ff4757;
+        }
+
+        .bubble-right::after {
+            content: '';
+            position: absolute;
+            top: 50%;
+            left: 100%;
+            transform: translateY(-50%);
+            border: 6px solid transparent;
+            border-left-color: #ff4757;
+        }
+
+        .bubble-bottom::after {
+            content: '';
+            position: absolute;
+            top: 100%;
+            left: 50%;
+            transform: translateX(-50%);
+            border: 6px solid transparent;
+            border-top-color: #ff4757;
+        }
+
+        /* 헤더 영역 */
+        header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            border-bottom: 2px dashed #ddd;
+            padding-bottom: 20px;
+            margin-bottom: 20px;
+            flex-wrap: wrap;
+            gap: 15px;
+        }
+
+        header h1 {
+            margin: 0;
+            font-size: 1.5rem;
+            color: #2c3e50;
+        }
+
+        .header-right {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .d-day-box {
+            background: #fff3cd;
+            padding: 10px 20px;
+            border-radius: 30px;
+            font-weight: 700;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .d-day-box input {
+            border: none;
+            background: transparent;
+            font-family: inherit;
+            font-weight: 700;
+            outline: none;
+            cursor: pointer;
+        }
+
+        #d-day-display {
+            font-size: 1.2rem;
+            color: #ff4757;
+        }
+
+        /* 짐 추가 영역 */
+        .add-item-wrapper {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            margin-bottom: 30px;
+        }
+
+        .add-item-section {
+            display: flex;
+            gap: 10px;
+            flex: 1;
+            background: #f1f2f6;
+            padding: 12px;
+            border-radius: 15px;
+        }
+
+        .add-item-section input {
+            flex: 1;
+            padding: 10px 15px;
+            border: 1px solid #ced4da;
+            border-radius: 10px;
+            font-size: 1rem;
+            font-family: inherit;
+            outline: none;
+        }
+
+        .add-item-section button {
+            background: #1e90ff;
+            color: white;
+            border: none;
+            padding: 0 20px;
+            border-radius: 10px;
+            font-weight: 700;
+            cursor: pointer;
+            transition: background 0.2s;
+        }
+
+        .add-item-section button:hover {
+            background: #007bed;
+        }
+
+        .main-content {
+            display: flex;
+            gap: 30px;
+        }
+
+        @media (max-width: 820px) {
+            .main-content { flex-direction: column; }
+            .add-item-wrapper { flex-direction: column; align-items: flex-start; }
+            .bubble-left::after, .bubble-right::after { display: none; }
+        }
+
+        /* 왼쪽: 캐리어 컨테이너 */
+        .suitcase-container {
+            flex: 1.5;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            position: relative;
+        }
+
+        .carrier-tooltip-box {
+            margin-bottom: 25px;
+            display: flex;
+            justify-content: center;
+            width: 100%;
+        }
+
+        .suitcase-wrapper {
+            width: 100%;
+            background: #57606f;
+            padding: 15px;
+            border-radius: 20px;
+            display: flex;
+            gap: 10px;
+            box-shadow: inset 0 0 20px rgba(0,0,0,0.3), 0 10px 15px rgba(0,0,0,0.1);
+            position: relative;
+            box-sizing: border-box;
+        }
+
+        .suitcase-handle {
+            position: absolute;
+            top: -18px;
+            left: 50%;
+            transform: translateX(-50%);
+            width: 80px;
+            height: 18px;
+            border: 8px solid #57606f;
+            border-bottom: none;
+            border-radius: 14px 14px 0 0;
+        }
+
+        .zipper-line {
+            width: 4px;
+            background: repeating-linear-gradient(
+                to bottom,
+                #2f3542,
+                #2f3542 5px,
+                #747d8c 5px,
+                #747d8c 10px
+            );
+            border-radius: 2px;
+        }
+
+        .compartment {
+            flex: 1;
+            background: #747d8c;
+            min-height: 350px;
+            border-radius: 10px;
+            padding: 15px;
+            display: flex;
+            flex-wrap: wrap;
+            align-content: flex-start;
+            gap: 10px;
+            position: relative;
+            transition: all 0.2s;
+        }
+
+        .compartment.drag-over {
+            background: #a4b0be;
+        }
+
+        .compartment-label {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            color: #dfe4ea;
+            font-weight: 700;
+            pointer-events: none;
+            opacity: 0.5;
+            font-size: 1.1rem;
+            text-align: center;
+        }
+
+        /* 오른쪽: 대기열 및 체크리스트 */
+        .controls-section {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            gap: 20px;
+        }
+
+        .progress-container {
+            background: #f1f2f6;
+            border-radius: 15px;
+            padding: 15px;
+        }
+        
+        .progress-title {
+            margin: 0 0 10px 0;
+            font-weight: 700;
+            font-size: 0.9rem;
+        }
+
+        .progress-bar-bg {
+            width: 100%;
+            height: 15px;
+            background-color: #dfe4ea;
+            border-radius: 10px;
+            overflow: hidden;
+        }
+
+        .progress-fill {
+            height: 100%;
+            width: 0%;
+            background: linear-gradient(90deg, #1e90ff, #70a1ff);
+            transition: width 0.5s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+
+        .draggable-items {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 10px;
+            min-height: 100px;
+            padding: 15px;
+            background: #f8f9fa;
+            border: 2px dashed #ced4da;
+            border-radius: 15px;
+            align-content: flex-start;
+        }
+
+        .item {
+            font-size: 0.9rem;
+            font-weight: 700;
+            color: #2f3542;
+            padding: 8px 14px;
+            background: white;
+            border: 2px solid #ced4da;
+            border-radius: 20px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.05);
+            cursor: grab;
+            user-select: none;
+            transition: transform 0.1s, border-color 0.2s;
+            display: inline-block;
+        }
+
+        .item:hover {
+            border-color: #1e90ff;
+            transform: translateY(-2px);
+        }
+
+        .item.dragging {
+            opacity: 0.5;
+            cursor: grabbing;
+        }
+
+        .checklist {
+            list-style: none;
+            padding: 0;
+            margin: 0;
+            display: grid;
+            grid-template-columns: 1fr;
+            gap: 8px;
+            max-height: 180px;
+            overflow-y: auto;
+        }
+
+        .checklist li {
+            padding: 8px 12px;
+            background: #f1f2f6;
+            border-radius: 8px;
+            font-size: 0.9rem;
+            color: #57606f;
+            transition: all 0.3s;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .checklist li.packed {
+            text-decoration: line-through;
+            color: #a4b0be;
+            background: #eccc68;
+        }
+
+        #reset-btn {
+            background-color: #2f3542;
+            color: white;
+            border: none;
+            padding: 12px;
+            border-radius: 10px;
+            font-weight: 700;
+            cursor: pointer;
+            transition: background 0.2s;
+            margin-top: auto;
+        }
+
+        #reset-btn:hover {
+            background-color: #57606f;
+        }
+    </style>
+</head>
+<body>
+
+    <div class="app-container">
+        <header>
+            <h1>✈️ 짐싸기 캔버스</h1>
+            
+            <div class="header-right">
+                <span class="tooltip-bubble bubble-right">디데이를 수정하세요! 👉</span>
+                <div class="d-day-box">
+                    <input type="date" id="trip-date" value="2027-01-15">
+                    <span id="d-day-display">D-Day</span>
+                </div>
+            </div>
+        </header>
+
+        <div class="add-item-wrapper">
+            <div class="add-item-section">
+                <input type="text" id="new-item-input" placeholder="새로운 짐을 입력하세요 (예: 보조배터리)" onkeypress="handleEnter(event)">
+                <button id="add-item-btn" onclick="addNewItem()">추가하기</button>
+            </div>
+            <span class="tooltip-bubble bubble-left">👈 짐을 직접 추가해보세요!</span>
+        </div>
+
+        <div class="main-content">
+            <!-- 왼쪽: 캐리어 영역 -->
+            <div class="suitcase-container">
+                <!-- 💡 여기서 멘트가 수정되었습니다! -->
+                <div class="carrier-tooltip-box">
+                    <span class="tooltip-bubble bubble-bottom">👇 마우스로 짐을 드래그해서 원하는 칸에 배치해 보세요!</span>
+                </div>
+
+                <div class="suitcase-wrapper">
+                    <div class="suitcase-handle"></div>
+                    
+                    <div class="compartment" id="zone-left">
+                        <span class="compartment-label" id="label-left">왼쪽 칸<br><span style="font-size:0.8rem">(의류/신발)</span></span>
+                    </div>
+                    
+                    <div class="zipper-line"></div>
+
+                    <div class="compartment" id="zone-right">
+                        <span class="compartment-label" id="label-right">오른쪽 칸<br><span style="font-size:0.8rem">(세면도구/전자기기)</span></span>
+                    </div>
+                </div>
+            </div>
+
+            <!-- 오른쪽: 컨트롤 영역 -->
+            <div class="controls-section">
+                <div class="progress-container">
+                    <p class="progress-title">짐싸기 달성률: <span id="progress-text">0%</span></p>
+                    <div class="progress-bar-bg">
+                        <div class="progress-fill" id="progress-fill"></div>
+                    </div>
+                </div>
+                
+                <div class="draggable-items" id="outside-zone">
+                    <div class="item" draggable="true" id="item-passport">여권</div>
+                    <div class="item" draggable="true" id="item-cash">환전 현금</div>
+                    <div class="item" draggable="true" id="item-adapter">돼지코(110V)</div>
+                </div>
+
+                <ul class="checklist" id="checklist">
+                    <li id="check-passport">여권</li>
+                    <li id="check-cash">환전 현금</li>
+                    <li id="check-adapter">돼지코(110V)</li>
+                </ul>
+
+                <button id="reset-btn">짐 모두 빼기 🔄</button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const dateInput = document.getElementById('trip-date');
+        const dDayDisplay = document.getElementById('d-day-display');
+
+        function updateDDay() {
+            const today = new Date();
+            today.setHours(0, 0, 0, 0);
+            const targetDate = new Date(dateInput.value);
+            targetDate.setHours(0, 0, 0, 0);
+            const diffTime = targetDate - today;
+            const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+
+            if (diffDays > 0) {
+                dDayDisplay.textContent = `D-${diffDays}`;
+                dDayDisplay.style.color = '#ff4757';
+            } else if (diffDays === 0) {
+                dDayDisplay.textContent = `D-Day! 🎉`;
+                dDayDisplay.style.color = '#2ed573';
+            } else {
+                dDayDisplay.textContent = `D+${Math.abs(diffDays)}`;
+                dDayDisplay.style.color = '#57606f';
+            }
+        }
+        dateInput.addEventListener('change', updateDDay);
+        updateDDay();
+
+        let totalItemsCount = 3;
+
+        function attachDragEvents(item) {
+            item.addEventListener('dragstart', (e) => {
+                item.classList.add('dragging');
+                e.dataTransfer.setData('text/plain', item.id);
+            });
+            item.addEventListener('dragend', () => {
+                item.classList.remove('dragging');
+            });
+        }
+
+        document.querySelectorAll('.item').forEach(attachDragEvents);
+
+        const dropZones = [
+            document.getElementById('zone-left'),
+            document.getElementById('zone-right'),
+            document.getElementById('outside-zone')
+        ];
+
+        dropZones.forEach(zone => {
+            zone.addEventListener('dragover', (e) => {
+                e.preventDefault();
+                if(zone.classList.contains('compartment')) {
+                    zone.classList.add('drag-over');
+                }
+            });
+
+            zone.addEventListener('dragleave', () => {
+                zone.classList.remove('drag-over');
+            });
+
+            zone.addEventListener('drop', (e) => {
+                e.preventDefault();
+                zone.classList.remove('drag-over');
+                
+                const id = e.dataTransfer.getData('text/plain');
+                const draggedElement = document.getElementById(id);
+                
+                if (draggedElement) {
+                    zone.appendChild(draggedElement);
+                    updateAppStatus();
+                }
+            });
+        });
+
+        function updateAppStatus() {
+            const leftCount = document.getElementById('zone-left').querySelectorAll('.item').length;
+            const rightCount = document.getElementById('zone-right').querySelectorAll('.item').length;
+            const packedItemsCount = leftCount + rightCount;
+            
+            const percent = totalItemsCount === 0 ? 0 : Math.round((packedItemsCount / totalItemsCount) * 100);
+
+            document.getElementById('progress-fill').style.width = percent + '%';
+            document.getElementById('progress-text').textContent = percent + '%';
+
+            document.getElementById('label-left').style.display = leftCount > 0 ? 'none' : 'block';
+            document.getElementById('label-right').style.display = rightCount > 0 ? 'none' : 'block';
+
+            document.querySelectorAll('.item').forEach(item => {
+                const checklistId = item.id.replace('item-', 'check-');
+                const checklistElement = document.getElementById(checklistId);
+                
+                if (checklistElement) {
+                    if (item.parentElement.id === 'zone-left' || item.parentElement.id === 'zone-right') {
+                        checklistElement.classList.add('packed');
+                    } else {
+                        checklistElement.classList.remove('packed');
+                    }
+                }
+            });
+        }
+
+        let itemCounter = 4;
+
+        function handleEnter(e) {
+            if (e.key === 'Enter') addNewItem();
+        }
+
+        function addNewItem() {
+            const input = document.getElementById('new-item-input');
+            const itemName = input.value.trim();
+            
+            if (itemName === '') {
+                alert('추가할 짐의 이름을 입력해주세요!');
+                return;
+            }
+
+            const uniqueId = 'item-custom-' + itemCounter;
+            const checkId = 'check-custom-' + itemCounter;
+            itemCounter++;
+
+            const newItem = document.createElement('div');
+            newItem.className = 'item';
+            newItem.draggable = true;
+            newItem.id = uniqueId;
+            newItem.textContent = itemName;
+            attachDragEvents(newItem);
+            document.getElementById('outside-zone').appendChild(newItem);
+
+            const newCheckList = document.createElement('li');
+            newCheckList.id = checkId;
+            newCheckList.textContent = itemName;
+            document.getElementById('checklist').appendChild(newCheckList);
+
+            input.value = '';
+            totalItemsCount++;
+            
+            updateAppStatus();
+        }
+
+        document.getElementById('reset-btn').addEventListener('click', () => {
+            const outsideZone = document.getElementById('outside-zone');
+            document.querySelectorAll('.item').forEach(item => {
+                outsideZone.appendChild(item);
+            });
+            updateAppStatus();
+        });
+    </script>
+</body>
+</html>
